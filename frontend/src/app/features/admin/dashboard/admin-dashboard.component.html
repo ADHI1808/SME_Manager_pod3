@@ -1,0 +1,152 @@
+<!-- src/app/features/admin/dashboard/admin-dashboard.component.html -->
+<div class="dashboard-wrapper">
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <div>
+      <h2>Admin Dashboard</h2>
+      <p>System overview — SME pool health, pending approvals, and activity feed</p>
+    </div>
+    <button mat-raised-button color="primary" (click)="loadDashboard()">
+      <mat-icon>refresh</mat-icon> Refresh
+    </button>
+  </div>
+
+  <app-loading-spinner *ngIf="loading"></app-loading-spinner>
+
+  <ng-container *ngIf="!loading && stats">
+
+    <!-- KPI Row -->
+    <div class="kpi-row">
+      <mat-card class="kpi-card" [class.accent-blue]="true" (click)="goToSmes()">
+        <div class="kpi-stripe blue"></div>
+        <div class="kpi-body">
+          <div class="kpi-label">Total SMEs</div>
+          <div class="kpi-value blue">{{ stats.totalSmes }}</div>
+          <div class="kpi-sub">in database</div>
+        </div>
+        <mat-icon class="kpi-icon">people</mat-icon>
+      </mat-card>
+
+      <mat-card class="kpi-card" (click)="goToSmes()">
+        <div class="kpi-stripe green"></div>
+        <div class="kpi-body">
+          <div class="kpi-label">Available Now</div>
+          <div class="kpi-value green">{{ stats.availableSmes }}</div>
+          <div class="kpi-sub">ready to book</div>
+        </div>
+        <mat-icon class="kpi-icon">check_circle</mat-icon>
+      </mat-card>
+
+      <mat-card class="kpi-card" (click)="goToApprovals()">
+        <div class="kpi-stripe amber"></div>
+        <div class="kpi-body">
+          <div class="kpi-label">Pending Approvals</div>
+          <div class="kpi-value amber">{{ stats.pendingApprovals }}</div>
+          <div class="kpi-sub">awaiting review</div>
+        </div>
+        <mat-icon class="kpi-icon">pending_actions</mat-icon>
+        <span class="badge-dot" *ngIf="stats.pendingApprovals && stats.pendingApprovals > 0">{{ stats.pendingApprovals }}</span>
+      </mat-card>
+
+      <mat-card class="kpi-card">
+        <div class="kpi-stripe purple"></div>
+        <div class="kpi-body">
+          <div class="kpi-label">Booked This Month</div>
+          <div class="kpi-value purple">{{ stats.bookedSmes }}</div>
+          <div class="kpi-sub">confirmed slots</div>
+        </div>
+        <mat-icon class="kpi-icon">event_available</mat-icon>
+      </mat-card>
+    </div>
+
+    <!-- Content row -->
+    <div class="content-row">
+
+      <!-- Pending Approvals Queue -->
+      <mat-card class="queue-card">
+        <mat-card-header>
+          <mat-card-title>
+            <mat-icon>pending_actions</mat-icon>
+            Pending Approval Queue
+            <span class="count-badge red" *ngIf="stats.recentRequests?.length">{{ stats.recentRequests?.length }}</span>
+          </mat-card-title>
+          <button mat-button color="primary" (click)="goToApprovals()">View All</button>
+        </mat-card-header>
+        <mat-card-content>
+          <div *ngIf="!stats.recentRequests?.length" class="empty-state">
+            <mat-icon>done_all</mat-icon>
+            <p>No pending requests</p>
+          </div>
+          <div class="request-list" *ngIf="stats.recentRequests?.length">
+            <div class="request-item" *ngFor="let req of stats.recentRequests" (click)="viewRequest(req.id)">
+              <div class="request-main">
+                <div class="request-id">{{ req.cohortId }}</div>
+                <div class="request-type">{{ req.evaluationType }}</div>
+                <div class="request-meta">{{ req.smesRequired }} SMEs · {{ req.pocName }} · {{ req.createdAt | date:'short' }}</div>
+              </div>
+              <div class="request-actions">
+                <app-status-badge [status]="req.status"></app-status-badge>
+                <button mat-icon-button color="primary" matTooltip="Review">
+                  <mat-icon>arrow_forward</mat-icon>
+                </button>
+              </div>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Activity Feed -->
+      <mat-card class="activity-card">
+        <mat-card-header>
+          <mat-card-title>
+            <mat-icon>timeline</mat-icon> Recent Activity
+          </mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div *ngIf="!stats.recentActivity?.length" class="empty-state">
+            <mat-icon>history</mat-icon><p>No recent activity</p>
+          </div>
+          <div class="activity-feed">
+            <div class="activity-item" *ngFor="let act of stats.recentActivity">
+              <div class="activity-dot" [style.background]="getActivityColor(act.activityType)">
+                <mat-icon>{{ getActivityIcon(act.activityType) }}</mat-icon>
+              </div>
+              <div class="activity-body">
+                <div class="activity-title">{{ act.description }}</div>
+                <div class="activity-meta">{{ act.performedBy }} · {{ act.createdAt | date:'short' }}</div>
+              </div>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+    </div>
+
+    <!-- Availability summary -->
+    <mat-card class="availability-card">
+      <mat-card-header>
+        <mat-card-title><mat-icon>donut_small</mat-icon> SME Availability Summary</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="avail-bars">
+          <div class="avail-item" *ngFor="let item of [
+            {label:'Available', value: stats.availableSmes, total: stats.totalSmes, color:'#1A8240'},
+            {label:'Booked',    value: stats.bookedSmes,    total: stats.totalSmes, color:'#6838A8'},
+            {label:'Pending',   value: stats.pendingSmes,   total: stats.totalSmes, color:'#BE780E'}
+          ]">
+            <div class="avail-label">
+              <span>{{ item.label }}</span>
+              <strong [style.color]="item.color">{{ item.value }}</strong>
+            </div>
+            <div class="avail-bar-bg">
+              <div class="avail-bar-fill" [style.width.%]="(item.value! / item.total!) * 100"
+                   [style.background]="item.color"></div>
+            </div>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+  </ng-container>
+</div>
