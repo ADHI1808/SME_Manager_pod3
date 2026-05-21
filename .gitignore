@@ -1,0 +1,10 @@
+# Frontend ignores
+frontend/node_modules/
+frontend/.angular/
+frontend/.idea/
+frontend/.vs/
+
+# Backend ignores (Adjust based on your backend language, e.g., Node, Python, Java)
+backend/node_modules/
+backend/venv/
+backend/.env
